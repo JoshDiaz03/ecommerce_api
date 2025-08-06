@@ -106,6 +106,8 @@ def home():
 # Create a customer with a POST request
 @app.route("/users", methods=["POST"])
 def add_user():
+    if request.json is None:
+        return jsonify({"error": "Request body is empty or invalid JSON."}), 400
     try:
         user_data = user_schema.load(request.json)
     except ValidationError as e:
@@ -135,9 +137,11 @@ def get_user(id):
 @app.route('/users/<int:id>', methods=['PUT'])
 def update_user(id):
     user = db.session.get(User, id)
-
     if not user:
-        return jsonify({"message": "Invalid id"}), 400
+        return jsonify({"message": "Invalid id"}), 404
+
+    if request.json is None:
+        return jsonify({"error": "Request body is empty or invalid JSON."}), 400
     
     try:
         user_data = user_schema.load(request.json)
@@ -148,8 +152,8 @@ def update_user(id):
     user.email = user_data['email']
     user.address = user_data['address']    
 
-    db.commit()
-    return user_schema.load(User), 200 
+    db.session.commit()
+    return user_schema.jsonify(user), 200
     
 
 #DELETE 
@@ -172,6 +176,9 @@ def delete_user(id):
 
 @app.route('/products', methods=['POST'])
 def create_product():
+    
+    if request.json is None:
+        return jsonify({"error": "Request body is empty or invalid JSON."}), 400
     try:
         product_data = product_schema.load(request.json)
     except ValidationError as e:
@@ -196,30 +203,33 @@ def get_product(id):
     product = db.session.get(Products, id)
     return product_schema.jsonify(product), 200
 
-@app.route('/products/<int:id>', method=['PUT'])
+@app.route('/products/<int:id>', methods=['PUT'])
 def update_product(id):
     product = db.session.get(Products, id)
 
     if not product:
-        return jsonify({"message": "Invalid id"}), 400
+        return jsonify({"message": "Invalid id"}), 404
+    
+    if request.json is None:
+        return jsonify({"error": "Request body is empty or invalid JSON."}), 400
     try:
         product_data = product_schema.load(request.json)
     except ValidationError as e:
         return jsonify(e.messages), 400
     
-    product.name = product_data['name']
+    product.product_name = product_data['product_name']
     product.price = product_data['price']
 
-    db.commit()
-    return product_schema.load(Products), 200
+    db.session.commit()
+    return product_schema.jsonify(product), 200
 
 #DELETE 
-@app.route('/productss/<int:id>', methods=['DELETE'])
+@app.route('/products/<int:id>', methods=['DELETE'])
 def delete_product(id):
     product = db.session.get(Products, id)
 
     if not product:
-        return jsonify({"message": "Invalid user id"}), 400
+        return jsonify({"message": "Invalid product id"}), 400
     
     db.session.delete(product)
     db.session.commit()
@@ -237,6 +247,8 @@ def delete_product(id):
 #CREATE an ORDER
 @app.route('/orders', methods=['POST'])
 def add_order():
+    if request.json is None:
+        return jsonify({"error": "Request body is empty or invalid JSON."}), 400
     try:
         order_data = order_schema.load(request.json)
     except ValidationError as e:
@@ -263,14 +275,15 @@ def get_user_orders(user_id):
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found."}), 400
-        return orders_schema.jsonify(user.orders), 200
+    return orders_schema.jsonify(user.orders), 200
+
 
 @app.route('/orders/int:order_id/products', methods=['GET'])
 def get_order_products(order_id):
-    order = db.session.get(Order, order_id)
+    order = db.session.get(Orders, order_id)
     if not order:
         return jsonify({"error": "Order not found."}), 400
-        return products_schema.jsonify(order.products), 200
+    return products_schema.jsonify(order.products), 200
 
 
 
